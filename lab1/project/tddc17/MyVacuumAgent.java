@@ -2,7 +2,6 @@ package tddc17;
 
 
 import aima.core.environment.liuvacuum.*;
-import graphBFS.Node;
 import aima.core.agent.Action;
 import aima.core.agent.AgentProgram;
 import aima.core.agent.Percept;
@@ -215,7 +214,7 @@ class MyAgentProgram implements AgentProgram {
 
 //The node class for creation of graph, use graph traversal for exploration
 //Using BFS
-public class Node {
+class Node {
 	
     int x , y; //for the coordinates of the nodes
     int direction;
@@ -232,44 +231,23 @@ public class Node {
     }
 }
 // all other nodes reachable from current position
-public class ChildNode{
+class ChildNode{
 	public Node front;
 	public Node left;
 	public Node right;
-	//No back direction, since only want to visit a node once.
-	//public Node back;
+	public Node back;
 }
-
 
 public class MyVacuumAgent extends AbstractAgent {
     public MyVacuumAgent() {
     	super(new MyAgentProgram() {
-    		
-    		//keep track of current status
-    		public Action currentAction(Action a) {
-    			switch (a) {
-    			case LIUVacuumEnvironment.ACTION_MOVE_FORWARD:
-    				state.agent_last_action = state.ACTION_MOVE_FORWARD;
-    				break;
-    			case LIUVacuumEnvironment.ACTION_TURN_RIGHT:
-    				state.agent_last_action = state.ACTION_TURN_RIGHT;
-    				break;
-    			case LIUVacuumEnvironment.ACTION_TURN_LEFT:
-    				state.agent_last_action = state.ACTION_TURN_LEFT
-    				break;
-    			case LIUVacuumEnvironment.ACTION_SUCK:
-    				state.agent_last_action = state.ACTION_SUCK;
-    				break;
-    			}
-    			return action;
-    		}
     		
     		public ChildNode getChildNode(Node node) {
     			int x = node.x;
     			int y = node.y;
     			int size = 15; // size of the map 15x15 is expected for demo
     			int direction = node.direction;
-    			Action action = node.action
+    			Action action = node.action;
     			ChildNode child = new ChildNode();
     			
     			// move front
@@ -294,14 +272,16 @@ public class MyVacuumAgent extends AbstractAgent {
     			//sanity check for moving forwards,  1<=x<=15 , 1<=y<=15 
     			if(newX >= 1 && newX <= size && newY >= 1 && newY <= size) {
     				if(state.world[newX][newY] != 1) {// i.e. the new X and Y coordinates are not the edge walls
-    					child.front = new Node(newX, newY, direction, action) // found a new tile for vacuum to move. 
+    					child.front = new Node(newX, newY, direction, action); // found a new tile for vacuum to move. 
     				}	
     			}
     			//move left
-    			child.left = new Node (x,y,( (direction - 1) % 4 ), action) //use % 4 to makes sure that the direction value is within 0 and 3. - 1 to turn 90 degrees anti-clockwise aka turn left
+    			child.left = new Node (x,y,( (direction - 1) % 4 ), action); //use % 4 to makes sure that the direction value is within 0 and 3. - 1 to turn 90 degrees anti-clockwise aka turn left
     			//move right
     			child.right = new Node (x,y,( (direction + 1) % 4 ), action); //use % 4 to makes sure that the direction value is within 0 and 3. + 1 to turn 90 degrees clockwise aka turn right 			
-    			return child;
+    			//move back
+    			child.back = new Node (x,y,( (direction + 2) % 4 ), action);
+       			return child;
     		}
     		public Action BFS(int x, int y, int direction, int target) {
 
@@ -315,12 +295,12 @@ public class MyVacuumAgent extends AbstractAgent {
     			LinkedList<Node> queue = new LinkedList<Node>();
     			
     			//dynamically add the child, to create the graph to traverse
-    			Node tempNode = new Node(x, y, dir, NoOpAction.NO_OP);
-    			ChildNode CNode = getChildren(tempNode);
+    			Node tempNode = new Node(x, y, direction, NoOpAction.NO_OP);
+    			ChildNode CNode = getChildNode(tempNode);
     			
     			//front of child node not empty
     			if (CNode.front != null) {
-    				CNode.forward.action = LIUVacuumEnvironment.ACTION_MOVE_FORWARD;
+    				CNode.front.action = LIUVacuumEnvironment.ACTION_MOVE_FORWARD;
     				if(CNode.visit == false)
     					queue.add(CNode); //add to the queue for exploration by BFS	if it is unvisited
         		}
@@ -353,7 +333,19 @@ public class MyVacuumAgent extends AbstractAgent {
     			
     			}
     		}	
-    		
+
+    		//keep track of current status
+    		public Action currentAction(Action a) {
+    			if (a == LIUVacuumEnvironment.ACTION_MOVE_FORWARD)
+    				state.agent_last_action = state.ACTION_MOVE_FORWARD;
+    			else if (a == LIUVacuumEnvironment.ACTION_TURN_RIGHT)
+    				state.agent_last_action = state.ACTION_TURN_RIGHT;
+    			else if (a == LIUVacuumEnvironment.ACTION_TURN_LEFT)
+    				state.agent_last_action = state.ACTION_TURN_LEFT;
+    			else if (a ==LIUVacuumEnvironment.ACTION_SUCK)
+    				state.agent_last_action = state.ACTION_SUCK; 			
+    			return a;
+    		}
     		
     		
     	});
