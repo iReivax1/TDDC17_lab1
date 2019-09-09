@@ -98,7 +98,7 @@ class MyAgentState
 
 class MyAgentProgram implements AgentProgram {
 
-	private int initnialRandomActions = 20;
+	protected int initnialRandomActions = 20;
 	private Random random_generator = new Random();
 	
 	// Here you can define your variables!
@@ -108,7 +108,7 @@ class MyAgentProgram implements AgentProgram {
 	// moves the Agent to a random start position
 	// uses percepts to update the Agent position - only the position, other percepts are ignored
 	// returns a random action
-	private Action moveToRandomStartPosition(DynamicPercept percept) {
+	protected Action moveToRandomStartPosition(DynamicPercept percept) {
 		int action = random_generator.nextInt(6);
 		initnialRandomActions--;
 		state.updatePosition(percept);
@@ -130,7 +130,7 @@ class MyAgentProgram implements AgentProgram {
 	//The agent is here
 	@Override
 	public Action execute(Percept percept) {
-		
+		MyVacuumAgent agent = new MyVacuumAgent();
 		// DO NOT REMOVE this if condition!!!
     	if (initnialRandomActions>0) {
     		return moveToRandomStartPosition((DynamicPercept) percept);
@@ -149,7 +149,7 @@ class MyAgentProgram implements AgentProgram {
     	System.out.println("x=" + state.agent_x_position);
     	System.out.println("y=" + state.agent_y_position);
     	System.out.println("dir=" + state.agent_direction);
-    	
+    		
 		
 	    iterationCounter--;
 	    
@@ -197,6 +197,7 @@ class MyAgentProgram implements AgentProgram {
 	    } 
 	    else
 	    {
+	    	//start the bfs
 	    	if (bump)
 	    	{
 	    		state.agent_last_action=state.ACTION_NONE;
@@ -218,7 +219,6 @@ class Node {
 	
     int x , y; //for the coordinates of the nodes
     int direction;
-    boolean visit;
     Action action;
  
     public Node(int x, int y, int direction, Action action)
@@ -227,7 +227,6 @@ class Node {
         this.y = y;
         this.direction = direction;
         this.action = action;
-        this.visit = false; //node is not visited
     }
 }
 // all other nodes reachable from current position
@@ -236,8 +235,9 @@ class ChildNode{
 	public Node left;
 	public Node right;
 	public Node back;
+	public boolean node;
+	protected boolean visit = false;
 }
-
 public class MyVacuumAgent extends AbstractAgent {
     public MyVacuumAgent() {
     	super(new MyAgentProgram() {
@@ -286,54 +286,151 @@ public class MyVacuumAgent extends AbstractAgent {
     		public Action BFS(int x, int y, int direction, int target) {
 
     			//Mark all the vertices as not visited (false)
-    			boolean visited[][] = new boolean[30][30]; 
-//    			TO-DO
-				//////////////////////////
-    			//how to mark current node?
+    			//boolean visited[][] = new boolean[30][30]; 
     			
     			//Create a queue for BFS
     			LinkedList<Node> queue = new LinkedList<Node>();
     			
     			//dynamically add the child, to create the graph to traverse
-    			Node tempNode = new Node(x, y, direction, NoOpAction.NO_OP);
-    			ChildNode CNode = getChildNode(tempNode);
-    			
-    			//front of child node not empty
+    			Node curNode = new Node(x, y, direction, NoOpAction.NO_OP);
+    			ChildNode CNode = getChildNode(curNode);
+    			CNode.visit = true;
+    			//front of child node not empty, add that node into the queue
     			if (CNode.front != null) {
     				CNode.front.action = LIUVacuumEnvironment.ACTION_MOVE_FORWARD;
-    				if(CNode.visit == false)
-    					queue.add(CNode); //add to the queue for exploration by BFS	if it is unvisited
+    				if(CNode.visit  == false)
+    					queue.add(CNode.front); //add to the queue for exploration by BFS	if it is unvisited
         		}
-    			//right of the child node is not empty
+    			//right of the child node is not empty, add that node into the queue
     			if (CNode.right != null) {
     				CNode.right.action = LIUVacuumEnvironment.ACTION_TURN_RIGHT;
     				if(CNode.visit == false)
-    					queue.add(CNode); //add to the queue for exploration by BFS		
+    					queue.add(CNode.right); //add to the queue for exploration by BFS		
         		}
-    			//left of the child node is not empty
+    			//left of the child node is not empty, add that node into the queue
     			if (CNode.left != null) {
     				CNode.left.action = LIUVacuumEnvironment.ACTION_TURN_LEFT;
     				if(CNode.visit == false)
-    					queue.add(CNode);//add to the queue for exploration by BFS		
+    					queue.add(CNode.left);//add to the queue for exploration by BFS		
         		}
     			
     			//while queue is not empty
     			while (queue.size() != 0) {
     				
-    				// Dequeue a vertex from queue
-    				Node source = queue.poll();
+    				// Dequeue a node(vertex of a graph) from queue
+    				Node vertex = queue.poll();
     				//if target found, can return the action
-    				if(state.world[source.x][source.y] == target) {
-    					return source.action;
+    				if(state.world[vertex.x][vertex.y] == target) {
+    					return vertex.action;
     				}
     				
-    				//	TO-DO
-    				//////////////////////////
-    				//if havent found target, need to go to the next children Nodes to explore
+    				ChildNode nextNode = getChildNode(vertex);
+    				//front of child node not empty, add that node into the queue
+        			if (nextNode.front != null) {
+        				nextNode.front.action = LIUVacuumEnvironment.ACTION_MOVE_FORWARD;
+        				if(nextNode.visit  == false)
+        					queue.add(nextNode.front); //add to the queue for exploration by BFS	if it is unvisited
+            		}
+        			//right of the child node is not empty, add that node into the queue
+        			if (nextNode.right != null) {
+        				nextNode.right.action = LIUVacuumEnvironment.ACTION_TURN_RIGHT;
+        				if(nextNode.visit == false)
+        					queue.add(nextNode.right); //add to the queue for exploration by BFS		
+            		}
+        			//left of the child node is not empty, add that node into the queue
+        			if (nextNode.left != null) {
+        				nextNode.left.action = LIUVacuumEnvironment.ACTION_TURN_LEFT;
+        				if(nextNode.visit == false)
+        					queue.add(nextNode.left);//add to the queue for exploration by BFS		
+            		}
+        			
     			
     			}
-    		}	
+				return NoOpAction.NO_OP;
+    		}		
+    		public Action execute(Percept percept) {
+    			// DO NOT REMOVE this if condition!!!
+    	    	if (initnialRandomActions>0) {
+    	    		return moveToRandomStartPosition((DynamicPercept) percept);
+    	    	} else if (initnialRandomActions==0) {
+    	    		// process percept for the last step of the initial random actions
+    	    		initnialRandomActions--;
+    	    		state.updatePosition((DynamicPercept) percept);
+    				System.out.println("Processing percepts after the last execution of moveToRandomStartPosition()");
+    				state.agent_last_action=state.ACTION_SUCK;
+    		    	return LIUVacuumEnvironment.ACTION_SUCK;
+    	    	}
+    			
+    	    	// This example agent program will update the internal agent state while only moving forward.
+    	    	// START HERE - code below should be modified!
+    	    	    	
+    	    	System.out.println("x=" + state.agent_x_position);
+    	    	System.out.println("y=" + state.agent_y_position);
+    	    	System.out.println("dir=" + state.agent_direction);
+    	    		
+    			
+    		    iterationCounter--;
+    		    
+    		    if (iterationCounter==0)
+    		    	return NoOpAction.NO_OP;
 
+    		    DynamicPercept p = (DynamicPercept) percept;
+    		    Boolean bump = (Boolean)p.getAttribute("bump");
+    		    Boolean dirt = (Boolean)p.getAttribute("dirt");
+    		    Boolean home = (Boolean)p.getAttribute("home");
+    		    System.out.println("percept: " + p);
+    		    
+    		    // State update based on the percept value and the last action
+    		    state.updatePosition((DynamicPercept)percept);
+    		    if (bump) {
+    				switch (state.agent_direction) {
+    				case MyAgentState.NORTH:
+    					state.updateWorld(state.agent_x_position,state.agent_y_position-1,state.WALL);
+    					break;
+    				case MyAgentState.EAST:
+    					state.updateWorld(state.agent_x_position+1,state.agent_y_position,state.WALL);
+    					break;
+    				case MyAgentState.SOUTH:
+    					state.updateWorld(state.agent_x_position,state.agent_y_position+1,state.WALL);
+    					break;
+    				case MyAgentState.WEST:
+    					state.updateWorld(state.agent_x_position-1,state.agent_y_position,state.WALL);
+    					break;
+    				}
+    		    }
+    		    if (dirt)
+    		    	state.updateWorld(state.agent_x_position,state.agent_y_position,state.DIRT);
+    		    else
+    		    	state.updateWorld(state.agent_x_position,state.agent_y_position,state.CLEAR);
+    		    
+    		    state.printWorldDebug();
+    		    
+    		    
+    		    // Next action selection based on the percept value
+    		    if (dirt)
+    		    {
+    		    	System.out.println("DIRT -> choosing SUCK action!");
+    		    	state.agent_last_action=state.ACTION_SUCK;
+    		    	return LIUVacuumEnvironment.ACTION_SUCK;
+    		    } 
+    		    else
+    		    {
+    		    	//start the bfs
+    		    	if (bump)
+    		    	{
+    		    		Action action = BFS(state.agent_x_position, state.agent_y_position, state.agent_direction, 0);
+    		    	    return currentAction(action);
+    		    	}
+    		    	else
+    		    	{
+    		    		state.agent_last_action=state.ACTION_MOVE_FORWARD;
+    		    		return LIUVacuumEnvironment.ACTION_MOVE_FORWARD;
+    		    	}
+        	
+    		    }
+
+    		}
+    		
     		//keep track of current status
     		public Action currentAction(Action a) {
     			if (a == LIUVacuumEnvironment.ACTION_MOVE_FORWARD)
@@ -347,7 +444,7 @@ public class MyVacuumAgent extends AbstractAgent {
     			return a;
     		}
     		
-    		
     	});
-	}
+    }
+    
 }
