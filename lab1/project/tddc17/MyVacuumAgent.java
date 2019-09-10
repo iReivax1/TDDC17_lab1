@@ -66,6 +66,14 @@ class MyAgentState
 				break;
 			}
 	    }
+		else if (agent_last_action == ACTION_TURN_RIGHT) {
+			agent_direction = (agent_direction + 1) % 4;
+		}
+		else if (agent_last_action == ACTION_TURN_LEFT) {
+			agent_direction = (agent_direction - 1) % 4;
+			if (agent_direction < 0) 
+				agent_direction += 4;
+		}
 		
 	}
 	
@@ -102,7 +110,7 @@ class MyAgentProgram implements AgentProgram {
 	private Random random_generator = new Random();
 	
 	// Here you can define your variables!
-	public int iterationCounter = 10;
+	public int iterationCounter = 1000;
 	public MyAgentState state = new MyAgentState();
 	
 	// moves the Agent to a random start position
@@ -197,7 +205,7 @@ class MyAgentProgram implements AgentProgram {
 	    } 
 	    else
 	    {
-	    	//start the bfs
+	    	
 	    	if (bump)
 	    	{
 	    		state.agent_last_action=state.ACTION_NONE;
@@ -217,7 +225,8 @@ class MyAgentProgram implements AgentProgram {
 //Using BFS
 class Node {
 	
-    int x , y; //for the coordinates of the nodes
+    int x;
+    int y; //for the coordinates of the nodes
     int direction;
     Action action;
  
@@ -273,27 +282,33 @@ public class MyVacuumAgent extends AbstractAgent {
     					child.front = new Node(newX, newY, direction, node.action); // found a new tile for vacuum to move. 
     				}	
     			}
-    			//move left
-    			child.left = new Node (x,y,( (direction - 1) % 4 ), node.action); //use % 4 to makes sure that the direction value is within 0 and 3. - 1 to turn 90 degrees anti-clockwise aka turn left
+    			
     			//move right
     			child.right = new Node (x,y,( (direction + 1) % 4 ), node.action); //use % 4 to makes sure that the direction value is within 0 and 3. + 1 to turn 90 degrees clockwise aka turn right 			
+    			
+    			//move left
+    			direction = (direction - 1) % 4;
+    			if(direction < 0)
+    				direction += 4;
+    			child.left = new Node (x,y,direction, node.action); //use % 4 to makes sure that the direction value is within 0 and 3. - 1 to turn 90 degrees anti-clockwise aka turn left
+    			
        			return child;
     		}
     		
     		public Action BFS(int x, int y, int direction, int goal) {
 
-    			//Mark all the vertices as not visited (false) first, add to visited if it is visited
-    			// maximum is 30x30. each tile can be visited in 4 direction.
+    			//Mark all the vertices as not visited (false) first, add to visited if it is visited, explored
+    			// maximum is 30x30. each tile can be visited in 4 direction. 0 - 3
     			boolean[][][] visited = new boolean[30][30][4]; 
+    			//another array for visiting, meaning that the tile needs to be visited, frontier
+    			boolean[][][] visiting = new boolean[30][30][4]; 
     			
     			//Create a queue for BFS
     			LinkedList<Node> queue = new LinkedList<Node>();
-    			//another array for visiting, meaning that the tile needs to be visited.
-    			boolean[][][] visiting = new boolean[30][30][4]; 
     			
     			//dynamically add the child, to create the graph to traverse
     			Node curNode = new Node(x, y, direction, NoOpAction.NO_OP);
-    			ChildNode CNode = getChildNode(curNode); // this child has no identity yet
+    			ChildNode CNode = getChildNode(curNode); 
     			
     			//front of child node not empty, add that node into the queue
     			if (CNode.front != null) {
@@ -316,19 +331,22 @@ public class MyVacuumAgent extends AbstractAgent {
     				CNode.left.action = LIUVacuumEnvironment.ACTION_TURN_LEFT;
     				//add to the queue for exploration by BFS	if it is unvisited
 					queue.add(CNode.left); 
-					//set that coordinate and direction to true, meaning want to visit that node.
 					visiting[CNode.left.x][CNode.left.y][CNode.left.direction] = true; 
         		}
     			
     			//while queue is not empty
     			while (queue.size() != 0) {
     				
+    				System.out.print("in the loop");
     				// Dequeue a node(vertex of a graph) from queue
-    				Node vertex = queue.poll();
-    				// mark this node as visited
-    				visited[vertex.x][vertex.y][direction] = true;
+    				Node vertex = queue.pollFirst();
+    				//if the node from the queue is not null, mark it as visited 
+    				if (vertex != null) {
+        				visiting[vertex.x][vertex.y][vertex.direction] = false;
+        			}
     				//if target found, can return the action
-    				if(state.world[vertex.x][vertex.y] == goal) {
+    				//since unknown = 0, find all the unknowns
+    				if(state.world[vertex.x][vertex.y] == goal) {  
     					return vertex.action;
     				}
     				
@@ -359,12 +377,42 @@ public class MyVacuumAgent extends AbstractAgent {
         						visiting[nextNode.left.x][nextNode.left.y][nextNode.left.direction] = true; 
         				}
             		}
+        			// mark this node as visited
+    				visited[vertex.x][vertex.y][vertex.direction] = true;
     			}
+    			System.out.print("end of BFS");
 				return NoOpAction.NO_OP;
     		}		
     		
     		public Action execute(Percept percept) {
+    			MyVacuumAgent agent = new MyVacuumAgent();
+    			// DO NOT REMOVE this if condition!!!
+    	    	if (initnialRandomActions>0) {
+    	    		return moveToRandomStartPosition((DynamicPercept) percept);
+    	    	} else if (initnialRandomActions==0) {
+    	    		// process percept for the last step of the initial random actions
+    	    		initnialRandomActions--;
+    	    		state.updatePosition((DynamicPercept) percept);
+    				System.out.println("Processing percepts after the last execution of moveToRandomStartPosition()");
+    				state.agent_last_action=state.ACTION_SUCK;
+    		    	return LIUVacuumEnvironment.ACTION_SUCK;
+    	    	}
     			
+    	    	// This example agent program will update the internal agent state while only moving forward.
+    	    	// START HERE - code below should be modified!
+    	    	    	
+    	    	System.out.println("x=" + state.agent_x_position);
+    	    	System.out.println("y=" + state.agent_y_position);
+    	    	System.out.println("dir=" + state.agent_direction);
+    	    		
+    			
+    		    iterationCounter--;
+    		    
+    		    if (iterationCounter==0) {
+    		    	System.out.print("no more iteration");
+    		    	return NoOpAction.NO_OP;
+    		    }
+    		    
     		    DynamicPercept p = (DynamicPercept) percept;
     		    Boolean bump = (Boolean)p.getAttribute("bump");
     		    Boolean dirt = (Boolean)p.getAttribute("dirt");
@@ -394,8 +442,10 @@ public class MyVacuumAgent extends AbstractAgent {
     		    else
     		    	state.updateWorld(state.agent_x_position,state.agent_y_position,state.CLEAR);
     		    
-    		    if(home)
-    		    	state.updateWorld(state.agent_x_position, state.agent_y_position,state.HOME);
+    		    if(!home)
+    		    	state.updateWorld(state.agent_x_position, state.agent_y_position,state.CLEAR); 
+    		    else if (home)
+    		    	state.updateWorld(state.agent_x_position, state.agent_y_position,state.HOME); 
     		    
     		    
     		    state.printWorldDebug();
@@ -406,22 +456,23 @@ public class MyVacuumAgent extends AbstractAgent {
     		    {
     		    	System.out.println("DIRT -> choosing SUCK action!");
     		    	state.agent_last_action=state.ACTION_SUCK;
-    		    	return currentAction(LIUVacuumEnvironment.ACTION_SUCK);
+    		    	return LIUVacuumEnvironment.ACTION_SUCK;
     		    } 
     		    else
     		    {
-    		    	//start the bfs
+    		    	//start the BFS
     		    	System.out.println("Time to explore");	
-		    		Action action = BFS(state.agent_x_position, state.agent_y_position, state.agent_direction, goal);
-		    		System.out.println("test BFS");	
+		    		Action action = BFS(state.agent_x_position, state.agent_y_position, state.agent_direction, goal);	
 		    		
 		    		//no more actions to do and not at home yet, time to go home
 		    		if(action == NoOpAction.NO_OP && goal != 4) {
-		    			goal = 4; //go home!!!
+		    			goal = 4;
 		    			action = LIUVacuumEnvironment.ACTION_MOVE_FORWARD;
 		    		}
-		    		else if (goal == 4 && home) {
+		    		else if (goal == 4 && home == true) {
 		    			//already at home
+		    			System.out.print("I am at home");
+		    			state.agent_last_action = state.HOME;
 		    			return NoOpAction.NO_OP;
 		    		}		
 		    		return currentAction(action);
