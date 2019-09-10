@@ -247,7 +247,6 @@ public class MyVacuumAgent extends AbstractAgent {
     			int y = node.y;
     			int size = 15; // size of the map 15x15 is expected for demo
     			int direction = node.direction;
-    			Action action = node.action;
     			ChildNode child = new ChildNode();
     			
     			// move front
@@ -271,13 +270,13 @@ public class MyVacuumAgent extends AbstractAgent {
     			//sanity check for moving forwards,  1<=x<=15 , 1<=y<=15 
     			if(newX >= 1 && newX <= size && newY >= 1 && newY <= size) {
     				if(state.world[newX][newY] != 1) {// i.e. the new X and Y coordinates are not the edge walls
-    					child.front = new Node(newX, newY, direction, action); // found a new tile for vacuum to move. 
+    					child.front = new Node(newX, newY, direction, node.action); // found a new tile for vacuum to move. 
     				}	
     			}
     			//move left
-    			child.left = new Node (x,y,( (direction - 1) % 4 ), action); //use % 4 to makes sure that the direction value is within 0 and 3. - 1 to turn 90 degrees anti-clockwise aka turn left
+    			child.left = new Node (x,y,( (direction - 1) % 4 ), node.action); //use % 4 to makes sure that the direction value is within 0 and 3. - 1 to turn 90 degrees anti-clockwise aka turn left
     			//move right
-    			child.right = new Node (x,y,( (direction + 1) % 4 ), action); //use % 4 to makes sure that the direction value is within 0 and 3. + 1 to turn 90 degrees clockwise aka turn right 			
+    			child.right = new Node (x,y,( (direction + 1) % 4 ), node.action); //use % 4 to makes sure that the direction value is within 0 and 3. + 1 to turn 90 degrees clockwise aka turn right 			
        			return child;
     		}
     		
@@ -339,31 +338,25 @@ public class MyVacuumAgent extends AbstractAgent {
     				//front of child node not empty, add that node into the queue
         			if (nextNode.front != null) {
         				// if this node is not already visited and not in the to visit (visiting) array already, then add it into visiting
-        				if(visited[nextNode.front.x][nextNode.front.y][nextNode.front.direction] == false) {
-        					if(visiting[nextNode.front.x][nextNode.front.y][nextNode.front.direction] == false) {
+        				if(visited[nextNode.front.x][nextNode.front.y][nextNode.front.direction] == false && visiting[nextNode.front.x][nextNode.front.y][nextNode.front.direction] == false) {
         						queue.add(nextNode.front); 
         						visiting[nextNode.front.x][nextNode.front.y][nextNode.front.direction] = true; 
-        					}
         				}
             		}
         			//right of the child node is not empty, add that node into the queue
         			if (nextNode.right != null) {
         				//if this node is not already visited and not in the to visit (visiting) array already, then add it into visiting
-        				if(visited[nextNode.right.x][nextNode.right.y][nextNode.right.direction] == false) {
-        					if(visiting[nextNode.right.x][nextNode.right.y][nextNode.right.direction] == false) {
+        				if(visited[nextNode.right.x][nextNode.right.y][nextNode.right.direction] == false && visiting[nextNode.right.x][nextNode.right.y][nextNode.right.direction] == false) {
         						queue.add(nextNode.right); 
         						visiting[nextNode.right.x][nextNode.right.y][nextNode.right.direction] = true; 
-        					}
         				}
             		}
         			//left of the child node is not empty, add that node into the queue
         			if (nextNode.left != null) {
         				//if this node is not already visited and not in the to visit (visiting) array already, then add it into visiting
-        				if(visited[nextNode.left.x][nextNode.left.y][nextNode.left.direction] == false) {
-        					if(visiting[nextNode.left.x][nextNode.left.y][nextNode.left.direction] == false) {
+        				if(visited[nextNode.left.x][nextNode.left.y][nextNode.left.direction] == false && visiting[nextNode.left.x][nextNode.left.y][nextNode.left.direction] == false) {
         						queue.add(nextNode.left); 
         						visiting[nextNode.left.x][nextNode.left.y][nextNode.left.direction] = true; 
-        					}
         				}
             		}
     			}
@@ -371,31 +364,7 @@ public class MyVacuumAgent extends AbstractAgent {
     		}		
     		
     		public Action execute(Percept percept) {
-    			// DO NOT REMOVE this if condition!!!
-    	    	if (initnialRandomActions>0) {
-    	    		return moveToRandomStartPosition((DynamicPercept) percept);
-    	    	} else if (initnialRandomActions==0) {
-    	    		// process percept for the last step of the initial random actions
-    	    		initnialRandomActions--;
-    	    		state.updatePosition((DynamicPercept) percept);
-    				System.out.println("Processing percepts after the last execution of moveToRandomStartPosition()");
-    				state.agent_last_action=state.ACTION_SUCK;
-    		    	return LIUVacuumEnvironment.ACTION_SUCK;
-    	    	}
     			
-    	    	// This example agent program will update the internal agent state while only moving forward.
-    	    	// START HERE - code below should be modified!
-    	    	    	
-    	    	System.out.println("x=" + state.agent_x_position);
-    	    	System.out.println("y=" + state.agent_y_position);
-    	    	System.out.println("dir=" + state.agent_direction);
-    	    	
-    			
-    		    iterationCounter--;
-    		    
-    		    if (iterationCounter==0)
-    		    	return NoOpAction.NO_OP;
-
     		    DynamicPercept p = (DynamicPercept) percept;
     		    Boolean bump = (Boolean)p.getAttribute("bump");
     		    Boolean dirt = (Boolean)p.getAttribute("dirt");
@@ -426,7 +395,7 @@ public class MyVacuumAgent extends AbstractAgent {
     		    	state.updateWorld(state.agent_x_position,state.agent_y_position,state.CLEAR);
     		    
     		    if(home)
-    		    	state.updateWorld(state.agent_x_position, state.agent_y_position, state.HOME);
+    		    	state.updateWorld(state.agent_x_position, state.agent_y_position,state.HOME);
     		    
     		    
     		    state.printWorldDebug();
@@ -451,11 +420,11 @@ public class MyVacuumAgent extends AbstractAgent {
 		    			goal = 4; //go home!!!
 		    			action = LIUVacuumEnvironment.ACTION_MOVE_FORWARD;
 		    		}
-		    		else if (action == NoOpAction.NO_OP  && goal == 4 && home) {
+		    		else if (goal == 4 && home) {
 		    			//already at home
-		    			return currentAction(action);
+		    			return NoOpAction.NO_OP;
 		    		}		
-		    			return currentAction(action);
+		    		return currentAction(action);
     		    }
     		}
     		
