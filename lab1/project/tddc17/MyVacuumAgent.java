@@ -98,11 +98,11 @@ class MyAgentState
 
 class MyAgentProgram implements AgentProgram {
 
-	protected int initnialRandomActions = 20;
+	protected int initnialRandomActions = 10;
 	private Random random_generator = new Random();
 	
 	// Here you can define your variables!
-	public int iterationCounter = 20;
+	public int iterationCounter = 10;
 	public MyAgentState state = new MyAgentState();
 	
 	// moves the Agent to a random start position
@@ -229,19 +229,19 @@ class Node {
         this.action = action;
     }
 }
-// all other nodes reachable from current position
+// all other neighbouring tiles/ nodes  from current position
 class ChildNode{
 	public Node front;
 	public Node left;
 	public Node right;
-	public Node back;
-	public boolean node;
-	protected boolean visit = false;
 }
+
 public class MyVacuumAgent extends AbstractAgent {
     public MyVacuumAgent() {
     	super(new MyAgentProgram() {
+    		int goal = 0; // 0 = unknown, 1 = wall , 2 = clear , 3 = dirt, 4 = home
     		
+    		//get the current's node child's function
     		public ChildNode getChildNode(Node node) {
     			int x = node.x;
     			int y = node.y;
@@ -259,7 +259,6 @@ public class MyVacuumAgent extends AbstractAgent {
     			else if (MyAgentState.WEST == direction) {
     				dx = -1;
     			}
-    			
     			if (MyAgentState.SOUTH == direction) {
     				dy = 1;
     			}
@@ -279,39 +278,47 @@ public class MyVacuumAgent extends AbstractAgent {
     			child.left = new Node (x,y,( (direction - 1) % 4 ), action); //use % 4 to makes sure that the direction value is within 0 and 3. - 1 to turn 90 degrees anti-clockwise aka turn left
     			//move right
     			child.right = new Node (x,y,( (direction + 1) % 4 ), action); //use % 4 to makes sure that the direction value is within 0 and 3. + 1 to turn 90 degrees clockwise aka turn right 			
-    			//move back
-    			child.back = new Node (x,y,( (direction + 2) % 4 ), action);
        			return child;
     		}
-    		public Action BFS(int x, int y, int direction, int target) {
+    		
+    		public Action BFS(int x, int y, int direction, int goal) {
 
-    			//Mark all the vertices as not visited (false)
-    			//boolean visited[][] = new boolean[30][30]; 
+    			//Mark all the vertices as not visited (false) first, add to visited if it is visited
+    			// maximum is 30x30. each tile can be visited in 4 direction.
+    			boolean[][][] visited = new boolean[30][30][4]; 
     			
     			//Create a queue for BFS
     			LinkedList<Node> queue = new LinkedList<Node>();
+    			//another array for visiting, meaning that the tile needs to be visited.
+    			boolean[][][] visiting = new boolean[30][30][4]; 
     			
     			//dynamically add the child, to create the graph to traverse
     			Node curNode = new Node(x, y, direction, NoOpAction.NO_OP);
-    			ChildNode CNode = getChildNode(curNode);
-    			CNode.visit = true;
+    			ChildNode CNode = getChildNode(curNode); // this child has no identity yet
+    			
     			//front of child node not empty, add that node into the queue
     			if (CNode.front != null) {
     				CNode.front.action = LIUVacuumEnvironment.ACTION_MOVE_FORWARD;
-    				if(CNode.visit  == false)
-    					queue.add(CNode.front); //add to the queue for exploration by BFS	if it is unvisited
+					//add to the queue for exploration by BFS	if it is unvisited
+					queue.add(CNode.front); 
+					//set that coordinate and direction to true, meaning want to visit that node.
+					visiting[CNode.front.x][CNode.front.y][CNode.front.direction] = true; 
         		}
     			//right of the child node is not empty, add that node into the queue
     			if (CNode.right != null) {
     				CNode.right.action = LIUVacuumEnvironment.ACTION_TURN_RIGHT;
-    				if(CNode.visit == false)
-    					queue.add(CNode.right); //add to the queue for exploration by BFS		
+    				//add to the queue for exploration by BFS	if it is unvisited
+					queue.add(CNode.right); 
+					//set that coordinate and direction to true, meaning want to visit that node.
+					visiting[CNode.right.x][CNode.right.y][CNode.right.direction] = true; 
         		}
     			//left of the child node is not empty, add that node into the queue
     			if (CNode.left != null) {
     				CNode.left.action = LIUVacuumEnvironment.ACTION_TURN_LEFT;
-    				if(CNode.visit == false)
-    					queue.add(CNode.left);//add to the queue for exploration by BFS		
+    				//add to the queue for exploration by BFS	if it is unvisited
+					queue.add(CNode.left); 
+					//set that coordinate and direction to true, meaning want to visit that node.
+					visiting[CNode.left.x][CNode.left.y][CNode.left.direction] = true; 
         		}
     			
     			//while queue is not empty
@@ -319,35 +326,50 @@ public class MyVacuumAgent extends AbstractAgent {
     				
     				// Dequeue a node(vertex of a graph) from queue
     				Node vertex = queue.poll();
+    				// mark this node as visited
+    				visited[vertex.x][vertex.y][direction] = true;
     				//if target found, can return the action
-    				if(state.world[vertex.x][vertex.y] == target) {
+    				if(state.world[vertex.x][vertex.y] == goal) {
     					return vertex.action;
     				}
     				
+    				//get the next child node for the temp node that we created, i.e.temp node is now the parent instead of child
     				ChildNode nextNode = getChildNode(vertex);
+    			
     				//front of child node not empty, add that node into the queue
         			if (nextNode.front != null) {
-        				nextNode.front.action = LIUVacuumEnvironment.ACTION_MOVE_FORWARD;
-        				if(nextNode.visit  == false)
-        					queue.add(nextNode.front); //add to the queue for exploration by BFS	if it is unvisited
+        				// if this node is not already visited and not in the to visit (visiting) array already, then add it into visiting
+        				if(visited[nextNode.front.x][nextNode.front.y][nextNode.front.direction] == false) {
+        					if(visiting[nextNode.front.x][nextNode.front.y][nextNode.front.direction] == false) {
+        						queue.add(nextNode.front); 
+        						visiting[nextNode.front.x][nextNode.front.y][nextNode.front.direction] = true; 
+        					}
+        				}
             		}
         			//right of the child node is not empty, add that node into the queue
         			if (nextNode.right != null) {
-        				nextNode.right.action = LIUVacuumEnvironment.ACTION_TURN_RIGHT;
-        				if(nextNode.visit == false)
-        					queue.add(nextNode.right); //add to the queue for exploration by BFS		
+        				//if this node is not already visited and not in the to visit (visiting) array already, then add it into visiting
+        				if(visited[nextNode.right.x][nextNode.right.y][nextNode.right.direction] == false) {
+        					if(visiting[nextNode.right.x][nextNode.right.y][nextNode.right.direction] == false) {
+        						queue.add(nextNode.right); 
+        						visiting[nextNode.right.x][nextNode.right.y][nextNode.right.direction] = true; 
+        					}
+        				}
             		}
         			//left of the child node is not empty, add that node into the queue
         			if (nextNode.left != null) {
-        				nextNode.left.action = LIUVacuumEnvironment.ACTION_TURN_LEFT;
-        				if(nextNode.visit == false)
-        					queue.add(nextNode.left);//add to the queue for exploration by BFS		
+        				//if this node is not already visited and not in the to visit (visiting) array already, then add it into visiting
+        				if(visited[nextNode.left.x][nextNode.left.y][nextNode.left.direction] == false) {
+        					if(visiting[nextNode.left.x][nextNode.left.y][nextNode.left.direction] == false) {
+        						queue.add(nextNode.left); 
+        						visiting[nextNode.left.x][nextNode.left.y][nextNode.left.direction] = true; 
+        					}
+        				}
             		}
-        			
-    			
     			}
 				return NoOpAction.NO_OP;
     		}		
+    		
     		public Action execute(Percept percept) {
     			// DO NOT REMOVE this if condition!!!
     	    	if (initnialRandomActions>0) {
@@ -367,7 +389,7 @@ public class MyVacuumAgent extends AbstractAgent {
     	    	System.out.println("x=" + state.agent_x_position);
     	    	System.out.println("y=" + state.agent_y_position);
     	    	System.out.println("dir=" + state.agent_direction);
-    	    		
+    	    	
     			
     		    iterationCounter--;
     		    
@@ -403,6 +425,10 @@ public class MyVacuumAgent extends AbstractAgent {
     		    else
     		    	state.updateWorld(state.agent_x_position,state.agent_y_position,state.CLEAR);
     		    
+    		    if(home)
+    		    	state.updateWorld(state.agent_x_position, state.agent_y_position, state.HOME);
+    		    
+    		    
     		    state.printWorldDebug();
     		    
     		    
@@ -411,27 +437,29 @@ public class MyVacuumAgent extends AbstractAgent {
     		    {
     		    	System.out.println("DIRT -> choosing SUCK action!");
     		    	state.agent_last_action=state.ACTION_SUCK;
-    		    	return LIUVacuumEnvironment.ACTION_SUCK;
+    		    	return currentAction(LIUVacuumEnvironment.ACTION_SUCK);
     		    } 
     		    else
     		    {
     		    	//start the bfs
-    		    	if (bump)
-    		    	{
-    		    		Action action = BFS(state.agent_x_position, state.agent_y_position, state.agent_direction, 0);
-    		    	    return currentAction(action);
-    		    	}
-    		    	else
-    		    	{
-    		    		state.agent_last_action=state.ACTION_MOVE_FORWARD;
-    		    		return LIUVacuumEnvironment.ACTION_MOVE_FORWARD;
-    		    	}
-        	
+    		    	System.out.println("Time to explore");	
+		    		Action action = BFS(state.agent_x_position, state.agent_y_position, state.agent_direction, goal);
+		    		System.out.println("test BFS");	
+		    		
+		    		//no more actions to do and not at home yet, time to go home
+		    		if(action == NoOpAction.NO_OP && goal != 4) {
+		    			goal = 4; //go home!!!
+		    			action = LIUVacuumEnvironment.ACTION_MOVE_FORWARD;
+		    		}
+		    		else if (action == NoOpAction.NO_OP  && goal == 4 && home) {
+		    			//already at home
+		    			return currentAction(action);
+		    		}		
+		    			return currentAction(action);
     		    }
-
     		}
     		
-    		//keep track of current status
+    		//keep track of current status / model of the agent
     		public Action currentAction(Action a) {
     			if (a == LIUVacuumEnvironment.ACTION_MOVE_FORWARD)
     				state.agent_last_action = state.ACTION_MOVE_FORWARD;
