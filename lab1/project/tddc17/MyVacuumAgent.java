@@ -1,4 +1,4 @@
-package tddc17;
+ package tddc17;
 
 
 import aima.core.environment.liuvacuum.*;
@@ -110,7 +110,7 @@ class MyAgentProgram implements AgentProgram {
 	private Random random_generator = new Random();
 	
 	// Here you can define your variables!
-	public int iterationCounter = 1000;
+	public int iterationCounter = 10000;
 	public MyAgentState state = new MyAgentState();
 	
 	// moves the Agent to a random start position
@@ -191,6 +191,10 @@ class MyAgentProgram implements AgentProgram {
 	    if (dirt)
 	    	state.updateWorld(state.agent_x_position,state.agent_y_position,state.DIRT);
 	    else
+	    	state.updateWorld(state.agent_x_position,state.agent_y_position,state.CLEAR);
+	    if(home)
+	    	state.updateWorld(state.agent_x_position,state.agent_y_position,state.HOME);
+	    else if(!home)
 	    	state.updateWorld(state.agent_x_position,state.agent_y_position,state.CLEAR);
 	    
 	    state.printWorldDebug();
@@ -275,13 +279,11 @@ public class MyVacuumAgent extends AbstractAgent {
     			}
     			int newX = x + dx; // new X position
     			int newY = y + dy; // new Y position
+    		
+				if(state.world[newX][newY] != 1) {// i.e. the new X and Y coordinates are not the edge walls
+					child.front = new Node(newX, newY, direction, node.action); // found a new tile for vacuum to move. 
+				}	
     			
-    			//sanity check for moving forwards,  1<=x<=15 , 1<=y<=15 
-    			if(newX >= 1 && newX <= size && newY >= 1 && newY <= size) {
-    				if(state.world[newX][newY] != 1) {// i.e. the new X and Y coordinates are not the edge walls
-    					child.front = new Node(newX, newY, direction, node.action); // found a new tile for vacuum to move. 
-    				}	
-    			}
     			
     			//move right
     			child.right = new Node (x,y,( (direction + 1) % 4 ), node.action); //use % 4 to makes sure that the direction value is within 0 and 3. + 1 to turn 90 degrees clockwise aka turn right 			
