@@ -90,19 +90,14 @@ public class CustomGraphSearch implements SearchObject {
 				if(!frontier.contains(childNode) && !explored.contains(childNode) ) {
 					//expand the chosen node adding the resulting nodes to the frontier 
 					if(insertFront) { // BFS is set to true
-						frontier.addNodeToFront(childNode); // FIFO => queue => BFS
-					}else { //DFS set to false
 						frontier.addNodeToBack(childNode); // LIFO => stack => DFS
+					}else { //DFS set to false
+						frontier.addNodeToFront(childNode); // FIFO => queue => BFS
+						
 					}	
 				}
-			}
-				
-			
+			}	
 		}
-		
-		 
-		
-		
 		return path;
 	}
 
