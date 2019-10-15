@@ -56,8 +56,8 @@ public class StateAndReward {
 		/* TODO: IMPLEMENT THIS FUNCTION */
 	
 		double rewardAngle = getRewardAngle(angle, 0, 0);
-		double rewardVx = Math.exp((vMax - Math.abs(vx)) / vMax);
-		double rewardVy = Math.exp((vMax - Math.abs(vy)) / vMax); //force it to be positive
+		double rewardVx = ((vMax - Math.abs(vx)) / vMax);
+		double rewardVy = ((vMax - Math.abs(vy)) / vMax); //force it to be positive
 		
 		//double reward = Math.exp(1)*rewardAngle + (rewardVx + rewardVy);
 		double reward = sigmoid(rewardAngle + (rewardVx + rewardVy)); //make it  0-1
